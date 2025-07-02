@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Movie Ticket System</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- QRCode.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+    <!-- Google Fonts (Inter and Padauk) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Padauk:wght@400;700&display=swap" rel="stylesheet">
@@ -173,9 +176,42 @@
             }
         }
 
+        /* Loading Overlay စတိုင် */
+        #loadingOverlay {
+            background-color: rgba(17, 24, 39, 0.75); /* bg-gray-900 with opacity */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 50;
+        }
+        #loadingOverlay.hidden {
+            display: none;
+        }
+        /* Spinner Animation */
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
     </style>
 </head>
 <body class="antialiased">
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="hidden">
+        <div class="bg-gray-800 p-6 rounded-lg shadow-xl text-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mx-auto mb-4"></div>
+            <p class="text-white text-lg">Loading...</p>
+        </div>
+    </div>
 
     <div id="app-container" class="max-w-5xl mx-auto p-2 sm:p-6">
 
@@ -196,6 +232,7 @@
                     </div>
                 </div>
                 <button id="buyTicketsBtn" class="btn btn-primary text-xl">Buy Tickets</button>
+                <p class="text-sm text-gray-500 mt-4">User ID: <span id="currentUserId">Loading...</span></p>
             </div>
         </div>
 
@@ -241,6 +278,7 @@
                     <p class="text-lg md:text-xl">ရွေးချယ်ထားသောခုံများ: <span id="selectedSeatsInfo" class="font-bold text-amber-400">-</span></p>
                     <p class="text-xl md:text-2xl mt-2">စုစုပေါင်းကျသင့်ငွေ: <span id="totalPriceInfo" class="font-bold text-green-400">0 Baht</span></p>
                     <button id="confirmBookingBtn" class="btn btn-primary mt-4 text-lg">Confirm</button>
+                    <div id="seatingErrorMessage" class="text-red-500 font-bold mt-4"></div>
                 </div>
             </div>
         </div>
@@ -276,13 +314,31 @@
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
+    <script type="module">
+        // Firebase SDKs များကို import လုပ်ခြင်း
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, runTransaction, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Canvas environment မှ ပေးပို့သော Global variables များ
+        // ဤနေရာတွင် သင့်ကိုယ်ပိုင် Firebase config ကို တိုက်ရိုက်ထည့်သွင်းနိုင်သည်၊ သို့မဟုတ် Canvas environment မှ ပေးပို့သည်ကို အသုံးပြုနိုင်သည်
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let app;
+        let db;
+        let auth;
+        let userId; // လက်ရှိ အသုံးပြုသူ၏ ID
+
+        // DOMContentLoaded Event Listener
+        document.addEventListener('DOMContentLoaded', async () => {
             const pages = document.querySelectorAll('.page');
             const buyTicketsBtn = document.getElementById('buyTicketsBtn');
             const cinemaButtons = document.querySelectorAll('#cinemaSelectionPage button');
             const confirmBookingBtn = document.getElementById('confirmBookingBtn');
             const paymentLink = document.getElementById('paymentLink');
+            const seatingErrorMessage = document.getElementById('seatingErrorMessage');
 
             // နောက်ပြန်ခလုတ်များ
             const backToIntroBtn = document.getElementById('backToIntroBtn');
@@ -295,6 +351,37 @@
             let countdownInterval;
             const COUNTDOWN_SECONDS = 15 * 60; // ငွေပေးချေမှုအတွက် ၁၅ မိနစ် သတ်မှတ်ထားသည်
 
+            let unsubscribeFromSeats = null; // Firestore listener ကို သိမ်းဆည်းရန်
+
+            // Firebase ကို initialize လုပ်ခြင်း
+            if (Object.keys(firebaseConfig).length > 0) {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Firebase Authentication
+                try {
+                    if (initialAuthToken) {
+                        // Canvas environment မှ ပေးပို့သော token ဖြင့် sign in လုပ်သည်
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        // token မရှိလျှင် anonymous အနေဖြင့် sign in လုပ်သည်
+                        await signInAnonymously(auth);
+                    }
+                    userId = auth.currentUser?.uid || crypto.randomUUID(); // အသုံးပြုသူ ID ကို ရယူသည်
+                    console.log("Firebase authenticated. User ID:", userId);
+                    document.getElementById('currentUserId').textContent = userId; // User ID ကို UI တွင် ပြသသည်
+                } catch (error) {
+                    console.error("Firebase authentication failed:", error);
+                    document.getElementById('currentUserId').textContent = "Authentication Error";
+                    // Authentication error ဖြစ်ပါက အသုံးပြုသူအား ပြသနိုင်သည်
+                }
+            } else {
+                console.warn("Firebase config not found. Running in demo mode without persistence.");
+                document.getElementById('currentUserId').textContent = "Demo Mode (No Persistence)";
+                // Firebase config မရှိလျှင် persistence လိုအပ်သော လုပ်ဆောင်ချက်များကို ပိတ်ထားနိုင်သည်
+            }
+
             // ရုပ်ရှင်ပိုစတာအတွက် ယုံကြည်စိတ်ချရသော ပုံ URL ကို အသုံးပြုသည်
             document.querySelector('#introPage img').src = 'https://raw.githubusercontent.com/Khunnaingpyaehtun/Ticket-System/main/Poster.png';
 
@@ -302,6 +389,7 @@
             // s=sofa/suite(800), p=premium/prime(500), n=normal/deluxe(300), x=sold, _=space
             const cinemaData = {
                  'maesot': {
+                    id: 'maesot', // Cinema ID ထည့်သွင်းထားသည်
                     name: 'SF CINEMA (MAE SOT)',
                     time: '၁၉/၇/၂၀၂၅ ညနေ ၃:၀၀',
                     prices: { n: 300, p: 500, s: 800 },
@@ -323,6 +411,7 @@
                     ]
                 },
                 'chiangmai': {
+                    id: 'chiangmai', // Cinema ID ထည့်သွင်းထားသည်
                     name: 'SFX CINEMA (MAYA CHIANGMAI)',
                     time: '၁၉/၇/၂၀၂၅ ညနေ ၆:၀၀',
                     prices: { n: 300, p: 500, s: 800 },
@@ -345,6 +434,7 @@
                     ]
                 },
                 'mbk': {
+                    id: 'mbk', // Cinema ID ထည့်သွင်းထားသည်
                     name: 'SF CINEMA (MBK CENTER)',
                     time: '၁၉/၇/၂၀၂၅ ညနေ ၄:၀၀',
                     prices: { n: 300, p: 500, s: 800 },
@@ -368,10 +458,24 @@
                     ]
                 }
             };
+
+            // Show loading overlay
+            function showLoading() {
+                document.getElementById('loadingOverlay').classList.remove('hidden');
+            }
+
+            // Hide loading overlay
+            function hideLoading() {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }
             
             // စာမျက်နှာများ ပြောင်းလဲရန် လုပ်ဆောင်ချက်
             function navigateTo(pageId) {
                 clearInterval(countdownInterval); // စာမျက်နှာပြောင်းတိုင်း countdown ကို ရပ်သည်
+                if (unsubscribeFromSeats) { // Seating plan မှ ထွက်ခွာလျှင် Firestore listener ကို ရှင်းလင်းသည်
+                    unsubscribeFromSeats();
+                    unsubscribeFromSeats = null;
+                }
                 pages.forEach(page => {
                     page.classList.remove('active');
                     if (page.id === pageId) {
@@ -400,16 +504,32 @@
                 confirmBookingBtn.classList.toggle('cursor-not-allowed', confirmBookingBtn.disabled);
             }
 
-            // ခုံနေရာချထားမှုကို ဖန်တီးရန်
-            function generateSeatingPlan(cinemaId) {
-                selectedCinema = cinemaData[cinemaId];
-                document.getElementById('cinemaName').textContent = selectedCinema.name;
-                document.getElementById('cinemaTime').textContent = selectedCinema.time;
-                
+            // Showtime string ကို Firestore document ID အတွက် format ပြောင်းလဲရန်
+            function formatShowtimeForId(showtimeString) {
+                // ဥပမာ: '၁၉/၇/၂၀၂၅ ညနေ ၃:၀၀' -> '19-7-2025-15-00'
+                const parts = showtimeString.split(' ');
+                const datePart = parts[0].replace(/\//g, '-'); 
+                let timePart = parts[2]; 
+
+                // ညနေ (PM) ကို 24-hour format သို့ ပြောင်းလဲခြင်း (ရိုးရှင်းသော ဥပမာ)
+                if (parts[1] === 'ညနေ') {
+                    let [hour, minute] = timePart.split(':').map(Number);
+                    if (hour < 12) hour += 12; 
+                    timePart = `${hour.toString().padStart(2, '0')}-${minute.toString().padStart(2, '0')}`;
+                } else {
+                    timePart = timePart.replace(/:/g, '-');
+                }
+                return `${datePart}-${timePart}`;
+            }
+
+            // ခုံနေရာချထားမှုကို ဖန်တီးရန် (Firestore မှ data ဖြင့်)
+            function renderSeatingGrid(soldSeatsFromFirestore) {
                 const seatingGrid = document.getElementById('seatingGrid');
                 seatingGrid.innerHTML = ''; // ရှိပြီးသား ခုံများကို ရှင်းလင်းသည်
-                selectedSeats = []; // ရွေးချယ်ထားသော ခုံများကို ရှင်းလင်းသည်
-                totalPrice = 0; // စုစုပေါင်း ဈေးနှုန်းကို ရှင်းလင်းသည်
+
+                // စုစုပေါင်း ဈေးနှုန်းနှင့် ရွေးချယ်ထားသော ခုံများကို ပြန်လည်တွက်ချက်ရန် ယာယီသိမ်းဆည်းထားသည်
+                let tempSelectedSeats = [];
+                let tempTotalPrice = 0;
 
                 selectedCinema.layout.forEach((rowLayout, rowIndex) => {
                     const rowLabelText = selectedCinema.rowLabels[rowIndex];
@@ -433,7 +553,7 @@
                             seat.dataset.seatId = seatId;
                             seat.textContent = seatNumber;
 
-                            if (seatType === 'x') {
+                            if (soldSeatsFromFirestore[seatId]) { // Firestore data ကို စစ်ဆေးပြီး ရောင်းပြီးသား ခုံများကို ပြသည်
                                 seat.className = 'seat sold'; // ရောင်းပြီးသား ခုံ
                             } else {
                                 const price = selectedCinema.prices[seatType];
@@ -445,6 +565,14 @@
                                 seat.className = `seat ${priceClass}`; // ဈေးနှုန်းအလိုက် အရောင်
                                 seat.dataset.price = price;
                                 
+                                // အသုံးပြုသူက ယခင်က ရွေးချယ်ထားသော ခုံများကို ပြန်လည်ရွေးချယ်ထားသည့်အတိုင်း ပြသသည်
+                                const isSelectedByUser = selectedSeats.some(s => s.id === seatId);
+                                if (isSelectedByUser) {
+                                    seat.classList.add('selected');
+                                    tempSelectedSeats.push({id: seatId, price: seat.dataset.price});
+                                    tempTotalPrice += parseInt(seat.dataset.price);
+                                }
+
                                 // ခုံကို နှိပ်လျှင် ရွေးချယ်/မရွေးချယ် လုပ်ဆောင်ချက်
                                 seat.addEventListener('click', () => {
                                     if (seat.classList.contains('selected')) {
@@ -463,10 +591,50 @@
                         }
                         rowDiv.appendChild(seat);
                     }
+                    rowDiv.setAttribute('aria-label', `Row ${rowLabelText}`); // Accessibility အတွက် aria-label ထည့်သွင်းသည်
                     seatingGrid.appendChild(rowDiv);
                 });
+                // Update global selectedSeats and totalPrice based on the re-rendered state
+                selectedSeats = tempSelectedSeats;
+                totalPrice = tempTotalPrice;
+                updateSelectionSummary(); // ရွေးချယ်မှု အကျဉ်းချုပ်ကို update လုပ်သည်
+            }
 
-                updateSelectionSummary();
+            // ခုံနေရာချထားမှုကို ဖန်တီးရန်နှင့် Firestore မှ data ဆွဲယူရန်
+            async function generateSeatingPlan(cinemaId) {
+                selectedCinema = cinemaData[cinemaId];
+                document.getElementById('cinemaName').textContent = selectedCinema.name;
+                document.getElementById('cinemaTime').textContent = selectedCinema.time;
+                seatingErrorMessage.textContent = ''; // Error message ရှင်းလင်းသည်
+
+                // ယခင် listener ကို ရှင်းလင်းသည်
+                if (unsubscribeFromSeats) {
+                    unsubscribeFromSeats();
+                    unsubscribeFromSeats = null;
+                }
+
+                if (!db) {
+                    console.error("Firestore is not initialized. Cannot fetch seat data.");
+                    renderSeatingGrid({}); // Firestore မရှိလျှင် ခုံများကို ရောင်းပြီးသားမရှိဘဲ ပြသသည်
+                    navigateTo('seatingPlanPage');
+                    return;
+                }
+
+                showLoading(); // Loading ပြသည်
+
+                const cinemaSeatsDocRef = doc(db, `artifacts/${appId}/public/data/cinemaSeats`, `${selectedCinema.id}-${formatShowtimeForId(selectedCinema.time)}`);
+
+                // Real-time listener ကို စတင်သည်
+                unsubscribeFromSeats = onSnapshot(cinemaSeatsDocRef, (docSnap) => {
+                    const soldSeatsFromFirestore = docSnap.exists() ? docSnap.data().soldSeats || {} : {};
+                    renderSeatingGrid(soldSeatsFromFirestore); // အပ်ဒိတ်လုပ်ထားသော data ဖြင့် ခုံများကို ပြန်လည်ပြသသည်
+                    hideLoading(); // Loading ကို ဖျောက်သည်
+                }, (error) => {
+                    console.error("Error listening to seat updates:", error);
+                    seatingErrorMessage.textContent = `Error loading seats: ${error.message}. Please try again.`;
+                    hideLoading(); // Loading ကို ဖျောက်သည်
+                });
+
                 navigateTo('seatingPlanPage');
             }
 
@@ -496,8 +664,7 @@
             
             // ငွေပေးချေမှု စာမျက်နှာကို ပြသရန်
             function showPaymentPage() {
-                if(selectedSeats.length === 0) return; // ခုံမရွေးရသေးလျှင် ပြန်ထွက်သည်
-                
+                // ဤ function သည် booking transaction အောင်မြင်ပြီးမှသာ ခေါ်ဆိုပါမည်။
                 const cinemaNameEl = document.getElementById('paymentCinemaName');
                 const cinemaTimeEl = document.getElementById('paymentCinemaTime');
                 const selectedSeatsEl = document.getElementById('paymentSelectedSeats');
@@ -532,7 +699,7 @@
                     if (error) {
                         console.error(error);
                         canvas.style.display = 'none'; // error ရှိလျှင် canvas ကို ဝှက်သည်
-                        downloadBtn.style.display = 'none'; // error ရှိလျှင် download ခလုတ်ကို ဝှက်သည်
+                        downloadBtn.style.display = 'none'; // error ရှိလျှလျှင် download ခလုတ်ကို ဝှက်သည်
                         return;
                     }
                     console.log('QR code generated successfully!');
@@ -540,6 +707,59 @@
                     downloadBtn.download = `what-happened-to-the-wolf-booking.png`;
                 });
             }
+
+            // Booking လုပ်ဆောင်ရန် လုပ်ဆောင်ချက် (Firestore Transaction ပါဝင်သည်)
+            async function attemptBooking() {
+                if (selectedSeats.length === 0) {
+                    seatingErrorMessage.textContent = 'ကျေးဇူးပြု၍ ခုံများ ရွေးချယ်ပါ။';
+                    return;
+                }
+                if (!db) {
+                    seatingErrorMessage.textContent = 'Database မရရှိနိုင်ပါ။ ကျေးဇူးပြု၍ စာမျက်နှာကို ပြန်လည်တင်ပါ။';
+                    return;
+                }
+
+                seatingErrorMessage.textContent = ''; // ယခင် error message ရှင်းလင်းသည်
+                showLoading(); // Loading ပြသည်
+
+                const cinemaSeatsDocRef = doc(db, `artifacts/${appId}/public/data/cinemaSeats`, `${selectedCinema.id}-${formatShowtimeForId(selectedCinema.time)}`);
+
+                try {
+                    await runTransaction(db, async (transaction) => {
+                        const docSnap = await transaction.get(cinemaSeatsDocRef);
+                        let currentSoldSeats = docSnap.exists() ? docSnap.data().soldSeats || {} : {};
+
+                        const seatsToUpdate = {};
+                        for (const seat of selectedSeats) {
+                            if (currentSoldSeats[seat.id]) {
+                                // ဤခုံသည် ရောင်းပြီးသားဖြစ်နေလျှင် transaction ကို ပယ်ဖျက်သည်
+                                throw new Error(`Seat ${seat.id} is already sold. Please select another seat.`);
+                            }
+                            seatsToUpdate[seat.id] = true; // ရောင်းပြီးသားအဖြစ် မှတ်သားသည်
+                        }
+
+                        // ရောင်းပြီးသား ခုံအသစ်များကို ရှိပြီးသားများနှင့် ပေါင်းစပ်သည်
+                        const newSoldSeats = { ...currentSoldSeats, ...seatsToUpdate };
+                        transaction.set(cinemaSeatsDocRef, {
+                            cinemaName: selectedCinema.name,
+                            showtime: selectedCinema.time,
+                            soldSeats: newSoldSeats
+                        }, { merge: true }); // merge ကို အသုံးပြု၍ soldSeats map ကိုသာ update လုပ်သည်
+
+                        // Transaction အောင်မြင်လျှင် payment page သို့ သွားသည်
+                        showPaymentPage();
+                    });
+                    console.log("Booking transaction successfully committed!");
+                } catch (e) {
+                    console.error("Booking transaction failed: ", e);
+                    seatingErrorMessage.textContent = `Booking failed: ${e.message || 'An unexpected error occurred.'} ကျေးဇူးပြု၍ ပြန်လည်ကြိုးစားပါ။`;
+                    // Error ဖြစ်လျှင် ခုံအခြေအနေများကို ပြန်လည်ဆွဲယူပြီး ပြသသည်
+                    // generateSeatingPlan(selectedCinema.id); // onSnapshot က အလိုအလျောက် update လုပ်ပေးမည်
+                } finally {
+                    hideLoading(); // Loading ကို ဖျောက်သည်
+                }
+            }
+
 
             // Event Listeners များ
             buyTicketsBtn.addEventListener('click', () => navigateTo('cinemaSelectionPage'));
@@ -551,7 +771,7 @@
                 });
             });
 
-            confirmBookingBtn.addEventListener('click', showPaymentPage);
+            confirmBookingBtn.addEventListener('click', attemptBooking); // Booking လုပ်ဆောင်ရန် function ကို ခေါ်သည်
             
             paymentLink.addEventListener('click', () => {
                 clearInterval(countdownInterval); // ငွေပေးချေမှု လင့်ခ်ကို နှိပ်လျှင် countdown ကို ရပ်သည်
