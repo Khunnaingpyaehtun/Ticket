@@ -1,824 +1,837 @@
 <!DOCTYPE html>
 <html lang="my">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Movie Ticket System</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- QRCode.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-    <!-- Google Fonts (Inter and Padauk) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Padauk:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        /* Body အတွက် အခြေခံ စတိုင်များ */
-        body {
-            font-family: 'Padauk', 'Inter', sans-serif;
-            background-color: #111827; /* အမှောင် နောက်ခံအရောင် */
-            color: #F3F4F6; /* အလင်းရောင် စာသား */
-        }
-        /* Page များကို ပြသရန်/ဝှက်ရန် */
-        .page {
-            display: none;
-        }
-        .page.active {
-            display: block;
-        }
-        /* ခုံများအတွက် အခြေခံ စတိုင်များ */
-        .seat {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            margin: 3px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: 500;
-            transition: transform 0.2s, background-color 0.2s;
-            flex-shrink: 0; /* နေရာမလုံလောက်လျှင် ခုံများ မကျုံ့စေရန် */
-        }
-        /* Sofa/Suite ခုံများသည် ပိုကျယ်သည် */
-        .seat.price-800 {
-            width: 32px; 
-        }
-        /* ရောင်းပြီးသား သို့မဟုတ် နေရာလွတ်မဟုတ်သော ခုံများပေါ်တွင် မောက်စ်တင်လိုက်လျှင် အရွယ်အစား အနည်းငယ် ကြီးလာစေရန် */
-        .seat:not(.sold):not(.space):hover {
-            transform: scale(1.1);
-        }
-        /* ဈေးနှုန်းအလိုက် ခုံအရောင်များ */
-        .seat.price-300 { background-color: #34D399; color: #064E3B; } /* အစိမ်းရောင် */
-        .seat.price-500 { background-color: #60A5FA; color: #1E3A8A; } /* အပြာရောင် */
-        .seat.price-800 { background-color: #F472B6; color: #831843; } /* ပန်းရောင် */
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Ticket System</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Padauk:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Body အတွက် အခြေခံ စတိုင်များ */
+        body {
+            font-family: 'Padauk', 'Inter', sans-serif;
+            background-color: #111827; /* အမှောင် နောက်ခံအရောင် */
+            color: #F3F4F6; /* အလင်းရောင် စာသား */
+        }
+        /* Page များကို ပြသရန်/ဝှက်ရန် */
+        .page {
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
+        /* ခုံများအတွက် အခြေခံ စတိုင်များ */
+        .seat {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            margin: 3px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 500;
+            transition: transform 0.2s, background-color 0.2s;
+            flex-shrink: 0; /* နေရာမလုံလောက်လျှင် ခုံများ မကျုံ့စေရန် */
+        }
+        /* Sofa/Suite ခုံများသည် ပိုကျယ်သည် */
+        .seat.price-800 {
+            width: 32px; 
+        }
+        /* ရောင်းပြီးသား သို့မဟုတ် နေရာလွတ်မဟုတ်သော ခုံများပေါ်တွင် မောက်စ်တင်လိုက်လျှင် အရွယ်အစား အနည်းငယ် ကြီးလာစေရန် */
+        .seat:not(.sold):not(.space):hover {
+            transform: scale(1.1);
+        }
+        /* ဈေးနှုန်းအလိုက် ခုံအရောင်များ */
+        .seat.price-300 { background-color: #34D399; color: #064E3B; } /* အစိမ်းရောင် */
+        .seat.price-500 { background-color: #60A5FA; color: #1E3A8A; } /* အပြာရောင် */
+        .seat.price-800 { background-color: #F472B6; color: #831843; } /* ပန်းရောင် */
 
-        /* ရွေးချယ်ထားသော ခုံများ */
-        .seat.selected { background-color: #FBBF24; color: #78350F; font-weight: bold; } /* ပယင်းရောင် */
-        /* ရောင်းပြီးသား ခုံများ */
-        .seat.sold { background-color: #4B5563; cursor: not-allowed; } /* မီးခိုးရောင် */
-        /* နေရာလွတ်များ */
-        .seat.space { background-color: transparent; cursor: default; }
+        /* ရွေးချယ်ထားသော ခုံများ */
+        .seat.selected { background-color: #FBBF24; color: #78350F; font-weight: bold; } /* ပယင်းရောင် */
+        /* ရောင်းပြီးသား ခုံများ */
+        .seat.sold { background-color: #4B5563; cursor: not-allowed; } /* မီးခိုးရောင် */
+        /* နေရာလွတ်များ */
+        .seat.space { background-color: transparent; cursor: default; }
 
-        /* ခုံတန်းများအတွက် စတိုင်များ */
-        .seat-row {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 5px;
-            flex-wrap: nowrap; /* ခုံတန်းများ တစ်တန်းတည်းရှိနေစေရန် */
-        }
-        /* တန်းအမည် (ဥပမာ: A, B, C) အတွက် စတိုင်များ */
-        .row-label {
-            width: 40px;
-            text-align: right;
-            margin-right: 10px;
-            font-weight: bold;
-            color: #9CA3AF;
-        }
-        /* ဖန်သားပြင် (Screen) အတွက် စတိုင်များ */
-        .screen {
-            width: 90%;
-            margin: 24px auto;
-            padding: 8px;
-            background-color: #374151;
-            text-align: center;
-            border-radius: 8px;
-            border-bottom: 5px solid #F9FAFB;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
-        }
-        /* ခလုတ်များအတွက် အခြေခံ စတိုင်များ */
-        .btn {
-            display: inline-block;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-weight: 600;
-            text-align: center;
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.2s;
-        }
-        /* အဓိက ခလုတ် (Primary Button) */
-        .btn-primary {
-            background-color: #3B82F6;
-            color: white;
-        }
-        .btn-primary:hover {
-            background-color: #2563EB;
-            transform: translateY(-2px);
-        }
-        /* ဒုတိယ ခလုတ် (Secondary Button) */
-         .btn-secondary {
-            background-color: #6B7280;
-            color: white;
-        }
-        .btn-secondary:hover {
-            background-color: #4B5563;
-        }
-        /* နောက်ပြန်ခလုတ် (Back Button) */
-        .btn-back {
-            padding: 8px 16px;
-        }
-        
-        /* Responsive styles for mobile (640px အောက် မျက်နှာပြင်များ) */
-        @media (max-width: 640px) {
-            .seat {
-                width: 24px;
-                height: 24px;
-                margin: 2px;
-                font-size: 10px;
-            }
-            .seat.price-800 {
-                width: 28px;
-            }
-            .row-label {
-                width: 30px;
-                margin-right: 5px;
-                font-size: 0.8rem;
-            }
-            h1 {
-                font-size: 1.5rem !important; /* Tailwind ကို override လုပ်ရန် !important အသုံးပြုသည် */
-            }
-        }
+        /* ခုံတန်းများအတွက် စတိုင်များ */
+        .seat-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 5px;
+            flex-wrap: nowrap; /* ခုံတန်းများ တစ်တန်းတည်းရှိနေစေရန် */
+        }
+        /* တန်းအမည် (ဥပမာ: A, B, C) အတွက် စတိုင်များ */
+        .row-label {
+            width: 40px;
+            text-align: right;
+            margin-right: 10px;
+            font-weight: bold;
+            color: #9CA3AF;
+        }
+        /* ဖန်သားပြင် (Screen) အတွက် စတိုင်များ */
+        .screen {
+            width: 90%;
+            margin: 24px auto;
+            padding: 8px;
+            background-color: #374151;
+            text-align: center;
+            border-radius: 8px;
+            border-bottom: 5px solid #F9FAFB;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+        /* ခလုတ်များအတွက် အခြေခံ စတိုင်များ */
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        /* အဓိက ခလုတ် (Primary Button) */
+        .btn-primary {
+            background-color: #3B82F6;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #2563EB;
+            transform: translateY(-2px);
+        }
+        /* ဒုတိယ ခလုတ် (Secondary Button) */
+         .btn-secondary {
+            background-color: #6B7280;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background-color: #4B5563;
+        }
+        /* နောက်ပြန်ခလုတ် (Back Button) */
+        .btn-back {
+            padding: 8px 16px;
+        }
+        
+        /* Responsive styles for mobile (640px အောက် မျက်နှာပြင်များ) */
+        @media (max-width: 640px) {
+            .seat {
+                width: 24px;
+                height: 24px;
+                margin: 2px;
+                font-size: 10px;
+            }
+            .seat.price-800 {
+                width: 28px;
+            }
+            .row-label {
+                width: 30px;
+                margin-right: 5px;
+                font-size: 0.8rem;
+            }
+            h1 {
+                font-size: 1.5rem !important; /* Tailwind ကို override လုပ်ရန် !important အသုံးပြုသည် */
+            }
+        }
 
-        /* Responsive styles for smaller mobile (420px အောက် မျက်နှာပြင်များ) */
-        @media (max-width: 420px) {
-             .seat {
-                width: 20px;
-                height: 20px;
-                margin: 2px;
-                font-size: 9px;
-            }
-            .seat.price-800 {
-                width: 24px;
-            }
-            .row-label {
-                width: 25px;
-                margin-right: 4px;
-            }
-        }
-        
-        /* Responsive styles for very small mobile (375px အောက် မျက်နှာပြင်များ) */
-        @media (max-width: 375px) {
-             .seat {
-                width: 18px;
-                height: 18px;
-                margin: 1px;
-                font-size: 8px;
-                border-radius: 4px;
-            }
-            .seat.price-800 {
-                width: 22px;
-            }
-            .row-label {
-                width: 22px;
-                font-size: 0.7rem;
-            }
-        }
+        /* Responsive styles for smaller mobile (420px အောက် မျက်နှာပြင်များ) */
+        @media (max-width: 420px) {
+             .seat {
+                width: 20px;
+                height: 20px;
+                margin: 2px;
+                font-size: 9px;
+            }
+            .seat.price-800 {
+                width: 24px;
+            }
+            .row-label {
+                width: 25px;
+                margin-right: 4px;
+            }
+        }
+        
+        /* Responsive styles for very small mobile (375px အောက် မျက်နှာပြင်များ) */
+        @media (max-width: 375px) {
+             .seat {
+                width: 18px;
+                height: 18px;
+                margin: 1px;
+                font-size: 8px;
+                border-radius: 4px;
+            }
+            .seat.price-800 {
+                width: 22px;
+            }
+            .row-label {
+                width: 22px;
+                font-size: 0.7rem;
+            }
+        }
 
-        /* Loading Overlay စတိုင် */
-        #loadingOverlay {
-            background-color: rgba(17, 24, 39, 0.75); /* bg-gray-900 with opacity */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 50;
-        }
-        #loadingOverlay.hidden {
-            display: none;
-        }
-        /* Spinner Animation */
-        .animate-spin {
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
+        /* Loading Overlay စတိုင် */
+        #loadingOverlay {
+            background-color: rgba(17, 24, 39, 0.75); /* bg-gray-900 with opacity */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 50;
+        }
+        #loadingOverlay.hidden {
+            display: none;
+        }
+        /* Spinner Animation */
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
 
-    </style>
+    </style>
 </head>
 <body class="antialiased">
 
-    <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="hidden">
-        <div class="bg-gray-800 p-6 rounded-lg shadow-xl text-center">
-            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mx-auto mb-4"></div>
-            <p class="text-white text-lg">Loading...</p>
-        </div>
-    </div>
+        <div id="loadingOverlay" class="hidden">
+        <div class="bg-gray-800 p-6 rounded-lg shadow-xl text-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mx-auto mb-4"></div>
+            <p class="text-white text-lg">Loading...</p>
+        </div>
+    </div>
 
-    <div id="app-container" class="max-w-5xl mx-auto p-2 sm:p-6">
+    <div id="app-container" class="max-w-5xl mx-auto p-2 sm:p-6">
 
-        <!-- Page 1: Intro -->
-        <div id="introPage" class="page active">
-            <div class="bg-gray-800 p-4 md:p-6 rounded-lg shadow-lg text-center">
-                <h1 class="text-4xl font-bold mb-4">What happened to the wolf?</h1>
-            
-                <img src="https://raw.githubusercontent.com/Khunnaingpyaehtun/Ticket-System/main/Poster.png" 
-                     onerror="this.onerror=null;this.src='https://placehold.co/600x400/1f2937/ffffff?text=Poster%20Not%20Found';"
-                     alt="Movie Poster" class="w-full max-w-md mx-auto rounded-lg mb-6 shadow-md">
-                <div class="mb-6">
-                    <h2 class="text-2xl font-semibold mb-2">ပြသမည့်နေရာများ</h2>
-                    <div class="flex justify-center space-x-4 text-lg">
-                        <span>Bangkok</span>
-                        <span>Chiang Mai</span>
-                        <span>Mae Sot</span>
-                    </div>
-                </div>
-                <!-- NEW: My Tickets Button -->
-                <div class="flex justify-center items-center gap-4 flex-wrap">
-                    <button id="buyTicketsBtn" class="btn btn-primary text-xl">Buy Tickets</button>
-                    <button id="myTicketsBtn" class="btn btn-secondary text-xl">My Tickets</button>
-                </div>
-                <p id="systemStatus" class="text-sm text-yellow-400 mt-4">Initializing...</p>
-                <p class="text-sm text-gray-500 mt-2">User ID: <span id="currentUserId">Loading...</span></p>
-            </div>
-        </div>
+                <div id="introPage" class="page active">
+            <div class="bg-gray-800 p-4 md:p-6 rounded-lg shadow-lg text-center">
+                <h1 class="text-4xl font-bold mb-4">What happened to the wolf?</h1>
+            
+                <img src="https://raw.githubusercontent.com/Khunnaingpyaehtun/Ticket-System/main/Poster.png" 
+                     onerror="this.onerror=null;this.src='https://placehold.co/600x400/1f2937/ffffff?text=Poster%20Not%20Found';"
+                     alt="Movie Poster" class="w-full max-w-md mx-auto rounded-lg mb-6 shadow-md">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-semibold mb-2">ပြသမည့်နေရာများ</h2>
+                    <div class="flex justify-center space-x-4 text-lg">
+                        <span>Bangkok</span>
+                        <span>Chiang Mai</span>
+                        <span>Mae Sot</span>
+                    </div>
+                </div>
+                                <div class="flex justify-center items-center gap-4 flex-wrap">
+                    <button id="buyTicketsBtn" class="btn btn-primary text-xl">Buy Tickets</button>
+                    <button id="myTicketsBtn" class="btn btn-secondary text-xl">My Tickets</button>
+                </div>
+                <p id="systemStatus" class="text-sm text-yellow-400 mt-4">Initializing...</p>
+                <p class="text-sm text-gray-500 mt-2">User ID: <span id="currentUserId">Loading...</span></p>
+            </div>
+        </div>
 
-        <!-- Page 2: Cinema Information -->
-        <div id="cinemaSelectionPage" class="page">
-             <div class="bg-gray-800 p-4 md:p-6 rounded-lg shadow-lg text-center relative">
-                <div class="absolute top-4 left-4">
-                    <button id="backToIntroBtn" class="btn btn-secondary btn-back">&lt; နောက်သို့</button>
-                </div>
-                <h1 class="text-3xl font-bold mb-6 pt-8">ရုပ်ရှင်ရုံ ရွေးချယ်ပါ</h1>
-                <div class="space-y-4">
-                    <button class="btn btn-secondary w-full text-lg" data-cinema="maesot">SF CINEMA (MAE SOT)</button>
-                    <button class="btn btn-secondary w-full text-lg" data-cinema="chiangmai">SFX CINEMA (MAYA CHIANGMAI)</button>
-                    <button class="btn btn-secondary w-full text-lg" data-cinema="mbk">SF CINEMA (MBK CENTER)</button>
-                </div>
-            </div>
-        </div>
+                <div id="cinemaSelectionPage" class="page">
+             <div class="bg-gray-800 p-4 md:p-6 rounded-lg shadow-lg text-center relative">
+                <div class="absolute top-4 left-4">
+                    <button id="backToIntroBtn" class="btn btn-secondary btn-back">&lt; နောက်သို့</button>
+                </div>
+                <h1 class="text-3xl font-bold mb-6 pt-8">ရုပ်ရှင်ရုံ ရွေးချယ်ပါ</h1>
+                <div class="space-y-4">
+                    <button class="btn btn-secondary w-full text-lg" data-cinema="maesot">SF CINEMA (MAE SOT)</button>
+                    <button class="btn btn-secondary w-full text-lg" data-cinema="chiangmai">SFX CINEMA (MAYA CHIANGMAI)</button>
+                    <button class="btn btn-secondary w-full text-lg" data-cinema="mbk">SF CINEMA (MBK CENTER)</button>
+                </div>
+            </div>
+        </div>
 
-        <!-- Page 3: Seating Plan -->
-        <div id="seatingPlanPage" class="page">
-            <div class="bg-gray-800 p-2 sm:p-4 md:p-6 rounded-lg shadow-lg relative">
-                <div class="absolute top-4 left-4 z-10">
-                    <button id="backToCinemaBtn" class="btn btn-secondary btn-back">&lt; နောက်သို့</button>
-                </div>
-                <h1 id="cinemaName" class="text-3xl font-bold text-center mb-2 pt-8"></h1>
-                <p id="cinemaTime" class="text-center text-gray-400 mb-4"></p>
-                
-                <div class="screen">SCREEN</div>
-                <div id="seatingContainer" class="overflow-x-auto pb-4">
-                  <div id="seatingGrid" class="flex flex-col items-center my-6 min-w-max"></div>
-                </div>
+                <div id="seatingPlanPage" class="page">
+            <div class="bg-gray-800 p-2 sm:p-4 md:p-6 rounded-lg shadow-lg relative">
+                <div class="absolute top-4 left-4 z-10">
+                    <button id="backToCinemaBtn" class="btn btn-secondary btn-back">&lt; နောက်သို့</button>
+                </div>
+                <h1 id="cinemaName" class="text-3xl font-bold text-center mb-2 pt-8"></h1>
+                <p id="cinemaTime" class="text-center text-gray-400 mb-4"></p>
+                
+                <div class="screen">SCREEN</div>
+                <div id="seatingContainer" class="overflow-x-auto pb-4">
+                  <div id="seatingGrid" class="flex flex-col items-center my-6 min-w-max"></div>
+                </div>
 
 
-                <div class="flex flex-wrap justify-center gap-x-4 gap-y-2 my-6">
-                    <div class="flex items-center"><div class="seat price-300 !m-0"></div><span class="ml-2">300 Baht</span></div>
-                    <div class="flex items-center"><div class="seat price-500 !m-0"></div><span class="ml-2">500 Baht</span></div>
-                    <div class="flex items-center"><div class="seat price-800 !m-0"></div><span class="ml-2">800 Baht</span></div>
-                    <div class="flex items-center"><div class="seat selected !m-0"></div><span class="ml-2">ရွေးချယ်ထား</span></div>
-                    <div class="flex items-center"><div class="seat sold !m-0"></div><span class="ml-2">ရောင်းပြီး</span></div>
-                </div>
+                <div class="flex flex-wrap justify-center gap-x-4 gap-y-2 my-6">
+                    <div class="flex items-center"><div class="seat price-300 !m-0"></div><span class="ml-2">300 Baht</span></div>
+                    <div class="flex items-center"><div class="seat price-500 !m-0"></div><span class="ml-2">500 Baht</span></div>
+                    <div class="flex items-center"><div class="seat price-800 !m-0"></div><span class="ml-2">800 Baht</span></div>
+                    <div class="flex items-center"><div class="seat selected !m-0"></div><span class="ml-2">ရွေးချယ်ထား</span></div>
+                    <div class="flex items-center"><div class="seat sold !m-0"></div><span class="ml-2">ရောင်းပြီး</span></div>
+                </div>
 
-                <div class="text-center mt-6 bg-gray-900 p-4 rounded-lg">
-                    <p class="text-lg md:text-xl">ရွေးချယ်ထားသောခုံများ: <span id="selectedSeatsInfo" class="font-bold text-amber-400">-</span></p>
-                    <p class="text-xl md:text-2xl mt-2">စုစုပေါင်းကျသင့်ငွေ: <span id="totalPriceInfo" class="font-bold text-green-400">0 Baht</span></p>
-                    <div class="mt-4 flex justify-center items-center flex-wrap gap-3">
-                        <button id="clearSelectionBtn" class="btn btn-secondary text-lg">ရွေးချယ်မှုများရှင်းလင်းမည်</button>
-                        <button id="confirmBookingBtn" class="btn btn-primary text-lg">Confirm</button>
-                    </div>
-                    <div id="seatingErrorMessage" class="text-red-500 font-bold mt-4"></div>
-                </div>
-            </div>
-        </div>
+                <div class="text-center mt-6 bg-gray-900 p-4 rounded-lg">
+                    <p class="text-lg md:text-xl">ရွေးချယ်ထားသောခုံများ: <span id="selectedSeatsInfo" class="font-bold text-amber-400">-</span></p>
+                    <p class="text-xl md:text-2xl mt-2">စုစုပေါင်းကျသင့်ငွေ: <span id="totalPriceInfo" class="font-bold text-green-400">0 Baht</span></p>
+                    <div class="mt-4 flex justify-center items-center flex-wrap gap-3">
+                        <button id="clearSelectionBtn" class="btn btn-secondary text-lg">ရွေးချယ်မှုများရှင်းလင်းမည်</button>
+                        <button id="confirmBookingBtn" class="btn btn-primary text-lg">Confirm</button>
+                    </div>
+                    <div id="seatingErrorMessage" class="text-red-500 font-bold mt-4"></div>
+                </div>
+            </div>
+        </div>
 
-        <!-- Page 4: Payment -->
-        <div id="paymentPage" class="page">
-            <div class="bg-gray-800 p-4 md:p-6 rounded-lg shadow-lg text-center relative">
-                <div class="absolute top-4 left-4">
-                    <button id="backToSeatingBtn" class="btn btn-secondary btn-back">&lt; နောက်သို့</button>
-                </div>
-                <h1 class="text-3xl font-bold mb-6 pt-8">အတည်ပြုခြင်းနှင့် ငွေပေးချေခြင်း</h1>
-                <div class="text-left bg-gray-700 p-4 rounded-lg space-y-3">
-                    <p><strong>ရုပ်ရှင်ရုံ:</strong> <span id="paymentCinemaName"></span></p>
-                    <p><strong>ပြသချိန်:</strong> <span id="paymentCinemaTime"></span></p>
-                    <p><strong>ခုံနံပါတ်များ:</strong> <span id="paymentSelectedSeats" class="font-bold"></span></p>
-                    <p><strong>Booking အချိန်:</strong> <span id="bookingTime"></span></p>
-                    <p class="text-2xl mt-4"><strong>စုစုပေါင်း:</strong> <span id="paymentTotalPrice" class="font-bold text-green-400"></span></p>
-                </div>
-                <div class="mt-6">
-                    <p id="countdownMessage" class="text-red-400 font-bold text-lg">ငွေပေးချေမှုကို ၁၅ မိနစ်အတွင်း အပြီးဆောင်ရွက်ပါ။</p>
-                    <p id="countdownTimer" class="text-2xl font-bold text-red-500 my-2"></p>
-                </div>
-                <div class="flex justify-center items-center gap-4 mt-4">
-                     <a id="paymentLink" href="#" target="_blank" class="btn btn-primary text-xl">Pay</a>
-                </div>
-                
-                <div class="mt-8 border-t border-gray-700 pt-6">
-                    <h2 class="text-xl font-semibold mb-4">သင်၏ Booking QR Code</h2>
-                    <canvas id="qrCanvas" class="mx-auto bg-white p-2 rounded-lg shadow-md"></canvas>
-                    <a id="downloadQRBtn" class="btn btn-secondary mt-4 inline-block">Download QR Code</a>
-                </div>
-            </div>
-        </div>
+                <div id="paymentPage" class="page">
+            <div class="bg-gray-800 p-4 md:p-6 rounded-lg shadow-lg text-center relative">
+                <div class="absolute top-4 left-4">
+                    <button id="backToSeatingBtn" class="btn btn-secondary btn-back">&lt; နောက်သို့</button>
+                </div>
+                <h1 class="text-3xl font-bold mb-6 pt-8">အတည်ပြုခြင်းနှင့် ငွေပေးချေခြင်း</h1>
+                <div class="text-left bg-gray-700 p-4 rounded-lg space-y-3">
+                    <p><strong>ရုပ်ရှင်ရုံ:</strong> <span id="paymentCinemaName"></span></p>
+                    <p><strong>ပြသချိန်:</strong> <span id="paymentCinemaTime"></span></p>
+                    <p><strong>ခုံနံပါတ်များ:</strong> <span id="paymentSelectedSeats" class="font-bold"></span></p>
+                    <p><strong>Booking အချိန်:</strong> <span id="bookingTime"></span></p>
+                    <p class="text-2xl mt-4"><strong>စုစုပေါင်း:</strong> <span id="paymentTotalPrice" class="font-bold text-green-400"></span></p>
+                </div>
+                <div class="mt-6">
+                    <p id="countdownMessage" class="text-red-400 font-bold text-lg">ငွေပေးချေမှုကို ၁၅ မိနစ်အတွင်း အပြီးဆောင်ရွက်ပါ။</p>
+                    <p id="countdownTimer" class="text-2xl font-bold text-red-500 my-2"></p>
+                </div>
+                <div class="flex justify-center items-center gap-4 mt-4">
+                     <a id="paymentLink" href="#" target="_blank" class="btn btn-primary text-xl">Pay</a>
+                </div>
+                
+                <div class="mt-8 border-t border-gray-700 pt-6">
+                    <h2 class="text-xl font-semibold mb-4">သင်၏ Booking QR Code</h2>
+                    <canvas id="qrCanvas" class="mx-auto bg-white p-2 rounded-lg shadow-md"></canvas>
+                    <a id="downloadQRBtn" class="btn btn-secondary mt-4 inline-block">Download QR Code</a>
+                </div>
+            </div>
+        </div>
 
-        <!-- NEW: Page 5: My Tickets -->
-        <div id="myTicketsPage" class="page">
-            <div class="bg-gray-800 p-4 md:p-6 rounded-lg shadow-lg relative">
-                <div class="absolute top-4 left-4">
-                    <button id="backToIntroFromTicketsBtn" class="btn btn-secondary btn-back">&lt; နောက်သို့</button>
-                </div>
-                <h1 class="text-3xl font-bold text-center mb-6 pt-8">ကျွန်ုပ်၏ လက်မှတ်များ</h1>
-                <div id="myTicketsContainer" class="space-y-6">
-                    <!-- My Tickets will be dynamically inserted here -->
-                    <p id="noTicketsMessage" class="text-center text-gray-400">လက်မှတ်များမရှိသေးပါ။</p>
-                </div>
-            </div>
-        </div>
+                <div id="myTicketsPage" class="page">
+            <div class="bg-gray-800 p-4 md:p-6 rounded-lg shadow-lg relative">
+                <div class="absolute top-4 left-4">
+                    <button id="backToIntroFromTicketsBtn" class="btn btn-secondary btn-back">&lt; နောက်သို့</button>
+                </div>
+                <h1 class="text-3xl font-bold text-center mb-6 pt-8">ကျွန်ုပ်၏ လက်မှတ်များ</h1>
+                <div id="myTicketsContainer" class="space-y-6">
+                                        <p id="noTicketsMessage" class="text-center text-gray-400">လက်မှတ်များမရှိသေးပါ။</p>
+                </div>
+            </div>
+        </div>
 
-    </div>
+    </div>
 
-    <script type="module">
-        // Firebase SDKs များကို import လုပ်ခြင်း
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, runTransaction, onSnapshot, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <script type="module">
+        // Firebase SDKs များကို import လုပ်ခြင်း
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, runTransaction, onSnapshot, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Canvas environment မှ ပေးပို့သော Global variables များ
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // Canvas environment မှ ပေးပို့သော Global variables များ
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        let app;
-        let db;
-        let auth;
-        let userId; // လက်ရှိ အသုံးပြုသူ၏ ID
-        let isFirebaseReady = false; // Firebase အဆင်သင့်ဖြစ်မဖြစ် စစ်ဆေးရန်
+        let app;
+        let db;
+        let auth;
+        let userId; // လက်ရှိ အသုံးပြုသူ၏ ID
+        let isFirebaseReady = false; // Firebase အဆင်သင့်ဖြစ်မဖြစ် စစ်ဆေးရန်
 
-        // DOMContentLoaded Event Listener
-        document.addEventListener('DOMContentLoaded', async () => {
-            const pages = document.querySelectorAll('.page');
-            const buyTicketsBtn = document.getElementById('buyTicketsBtn');
-            const myTicketsBtn = document.getElementById('myTicketsBtn'); // New button
-            const cinemaButtons = document.querySelectorAll('#cinemaSelectionPage button');
-            const confirmBookingBtn = document.getElementById('confirmBookingBtn');
-            const clearSelectionBtn = document.getElementById('clearSelectionBtn');
-            const paymentLink = document.getElementById('paymentLink');
-            const seatingErrorMessage = document.getElementById('seatingErrorMessage');
-            const systemStatus = document.getElementById('systemStatus');
+        // DOMContentLoaded Event Listener
+        document.addEventListener('DOMContentLoaded', async () => {
+            const pages = document.querySelectorAll('.page');
+            const buyTicketsBtn = document.getElementById('buyTicketsBtn');
+            const myTicketsBtn = document.getElementById('myTicketsBtn'); // New button
+            const cinemaButtons = document.querySelectorAll('#cinemaSelectionPage button');
+            const confirmBookingBtn = document.getElementById('confirmBookingBtn');
+            const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+            const paymentLink = document.getElementById('paymentLink');
+            const seatingErrorMessage = document.getElementById('seatingErrorMessage');
+            const systemStatus = document.getElementById('systemStatus');
 
-            // နောက်ပြန်ခလုတ်များ
-            const backToIntroBtn = document.getElementById('backToIntroBtn');
-            const backToCinemaBtn = document.getElementById('backToCinemaBtn');
-            const backToSeatingBtn = document.getElementById('backToSeatingBtn');
-            const backToIntroFromTicketsBtn = document.getElementById('backToIntroFromTicketsBtn'); // New back button
+            // နောက်ပြန်ခလုတ်များ
+            const backToIntroBtn = document.getElementById('backToIntroBtn');
+            const backToCinemaBtn = document.getElementById('backToCinemaBtn');
+            const backToSeatingBtn = document.getElementById('backToSeatingBtn');
+            const backToIntroFromTicketsBtn = document.getElementById('backToIntroFromTicketsBtn'); // New back button
 
-            let selectedCinema = {};
-            let selectedSeats = [];
-            let totalPrice = 0;
-            let countdownInterval;
-            const COUNTDOWN_SECONDS = 15 * 60; // ငွေပေးချေမှုအတွက် ၁၅ မိနစ် သတ်မှတ်ထားသည်
+            let selectedCinema = {};
+            let selectedSeats = [];
+            let totalPrice = 0;
+            let countdownInterval;
+            const COUNTDOWN_SECONDS = 15 * 60; // ငွေပေးချေမှုအတွက် ၁၅ မိနစ် သတ်မှတ်ထားသည်
 
-            let unsubscribeFromSeats = null; // Firestore listener ကို သိမ်းဆည်းရန်
+            let unsubscribeFromSeats = null; // Firestore listener ကို သိမ်းဆည်းရန်
 
-            // --- Firebase Initialization with Improved Debugging ---
-            systemStatus.textContent = 'Connecting to Firebase...';
-            if (Object.keys(firebaseConfig).length > 0 && appId !== 'default-app-id') {
-                try {
-                    app = initializeApp(firebaseConfig);
-                    db = getFirestore(app);
-                    auth = getAuth(app);
-                    console.log("Firebase App Initialized.");
+            // --- Firebase Initialization with Improved Debugging ---
+            systemStatus.textContent = 'Connecting to Firebase...';
+            if (Object.keys(firebaseConfig).length > 0 && appId !== 'default-app-id') {
+                try {
+                    app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    console.log("Firebase App Initialized.");
 
-                    // Firebase Authentication
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
+                    // Firebase Authentication
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
 
-                    onAuthStateChanged(auth, (user) => {
-                        if (user) {
-                            userId = user.uid;
-                            isFirebaseReady = true;
-                            console.log("Firebase Authenticated. User ID:", userId);
-                            document.getElementById('currentUserId').textContent = userId;
-                            systemStatus.textContent = 'System Ready';
-                            systemStatus.classList.remove('text-yellow-400');
-                            systemStatus.classList.add('text-green-400');
-                        } else {
-                            // This case should ideally not happen with anonymous sign-in
-                            isFirebaseReady = false;
-                            console.error("Firebase Authentication failed: No user object found.");
-                            document.getElementById('currentUserId').textContent = "Auth Error";
-                            systemStatus.textContent = 'Authentication Failed';
-                            systemStatus.classList.add('text-red-500');
-                        }
-                    });
-                } catch (error) {
-                    isFirebaseReady = false;
-                    console.error("Firebase Initialization Failed:", error);
-                    systemStatus.textContent = `Firebase Error: ${error.message}`;
-                    systemStatus.classList.add('text-red-500');
-                    document.getElementById('currentUserId').textContent = "Connection Error";
-                }
-            } else {
-                isFirebaseReady = false;
-                console.warn("Firebase config not found. Running in demo mode without persistence.");
-                systemStatus.textContent = 'Demo Mode (No Database)';
-                systemStatus.classList.add('text-yellow-400');
-                document.getElementById('currentUserId').textContent = "N/A";
-            }
-            
-            document.querySelector('#introPage img').src = 'https://raw.githubusercontent.com/Khunnaingpyaehtun/Ticket-System/main/Poster.png';
+                    onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            userId = user.uid;
+                            isFirebaseReady = true;
+                            console.log("Firebase Authenticated. User ID:", userId);
+                            document.getElementById('currentUserId').textContent = userId;
+                            systemStatus.textContent = 'System Ready';
+                            systemStatus.classList.remove('text-yellow-400');
+                            systemStatus.classList.add('text-green-400');
+                        } else {
+                            // This case should ideally not happen with anonymous sign-in
+                            isFirebaseReady = false;
+                            console.error("Firebase Authentication failed: No user object found.");
+                            document.getElementById('currentUserId').textContent = "Auth Error";
+                            systemStatus.textContent = 'Authentication Failed';
+                            systemStatus.classList.add('text-red-500');
+                        }
+                    });
+                } catch (error) {
+                    isFirebaseReady = false;
+                    console.error("Firebase Initialization Failed:", error);
+                    systemStatus.textContent = `Firebase Error: ${error.message}`;
+                    systemStatus.classList.add('text-red-500');
+                    document.getElementById('currentUserId').textContent = "Connection Error";
+                }
+            } else {
+                isFirebaseReady = false;
+                console.warn("Firebase config not found. Running in demo mode without persistence.");
+                systemStatus.textContent = 'Demo Mode (No Database)';
+                systemStatus.classList.add('text-yellow-400');
+                document.getElementById('currentUserId').textContent = "N/A";
+            }
+            
+            document.querySelector('#introPage img').src = 'https://raw.githubusercontent.com/Khunnaingpyaehtun/Ticket-System/main/Poster.png';
 
-            const cinemaData = {
-                 'maesot': { id: 'maesot', name: 'SF CINEMA (MAE SOT)', time: '19/07/2025 03:00 PM', prices: { n: 300, p: 500, s: 800 }, rowLabels: ["M", "L", "K", "J", "H", "G", "F", "E", "D", "C", "B", "A", "AA"], layout: [ "nnn_nnnnnnnnnnnnnnnn_nnn", "nnn_nnnnnnnnnnnnnnnn_nnn", "nnn_nnnnnnnnnnnnnnnn_nnn", "nnn_nnnnnnnnnnnnnnnn_nnn", "nnn_nnnnnnnnnnnnnnnn_nnn", "nnn_nnnnnnnnnnnnnnnn_nnn", "nnn_nnnnnnnnnnnnnnnn_nnn", "nnn_nnnnnnnnnnnnnnnn_nnn", "ppp_pppppppppppppppp_ppp", "ppp_pppppppppppppppp_ppp", "ppp_pppppppppppppppp_ppp", "ppp_pppppppppppppppp_ppp", "sss_sssssss_sss" ] },
-                'chiangmai': { id: 'chiangmai', name: 'SFX CINEMA (MAYA CHIANGMAI)', time: '19/07/2025 06:00 PM', prices: { n: 300, p: 500, s: 800 }, rowLabels: ["N", "M", "L", "K", "J", "H", "G", "F", "E", "D", "C", "B", "A", "AA"], layout: [ "nnnnnnnnnnnnnnnnnnnnnnnn", "nnnnnnnnnnnnnnnnnnnnnnnn", "nnnnnnnnnnnnnnnnnnnnnnnn", "nnnnnnnnnnnnnnnnnnnnnnnn", "nnnnnnnnnnnnnnnnnnnnnnnn", "nnnnnnnnnnnnnnnnnnnnnnnn", "nnnnnnnnnnnnnnnnnnnnnnnn", "nnnnnnnnnnnnnnnnnnnnnnnn", "nnnnnnnnnnnnnnnnnnnnnnnn", "nnnnnnnnnnnnnnnnnnnnnnnn", "pppppppppppppppppppppp", "pppppppppppppppppppppp", "pppppppppppppppppppppp", "ss_ss_ss_ss_ss_ss" ] },
-                'mbk': { id: 'mbk', name: 'SF CINEMA (MBK CENTER)', time: '19/07/2025 04:00 PM', prices: { n: 300, p: 500, s: 800 }, rowLabels: ["P", "N", "M", "L", "K", "J", "H", "G", "F", "E", "D", "C", "B", "A", "AA"], layout: [ "nnnnnnnnnn_nnnnnnnnnn", "nnnnnnnnnn_nnnnnnnnnn", "nnnnnnnnnn_nnnnnnnnnn", "nnnnnnnnnn_nnnnnnnnnn", "nnnnnnnnnn_nnnnnnnnnn", "nnnnnnnnnn_nnnnnnnnnn", "nnnnnnnnnn_nnnnnnnnnn", "nnnnnnnnnn_nnnnnnnnnn", "nnnnnnnnnn_nnnnnnnnnn", "ppppppppp_ppppppppp", "ppppppppp_ppppppppp", "ppppppppp_ppppppppp", "ppppppppp_ppppppppp", "ppppppppp_ppppppppp", "ssssss_ssssss" ] }
-            };
+            const cinemaData = {
+                 'maesot': { id: 'maesot', name: 'SF CINEMA (MAE SOT)', time: '19/07/2025 03:00 PM', prices: { n: 300, p: 500, s: 800 }, rowLabels: ["M", "L", "K", "J", "H", "G", "F", "E", "D", "C", "B", "A", "AA"], layout: [ "nnn_nnnnnnnnnnnnnnnn_nnn", "nnn_nnnnnnnnnnnnnnnn_nnn", "nnn_nnnnnnnnnnnnnnnn_nnn", "nnn_nnnnnnnnnnnnnnnn_nnn", "nnn_nnnnnnnnnnnnnnnn_nnn", "nnn_nnnnnnnnnnnnnnnn_nnn", "nnn_nnnnnnnnnnnnnnnn_nnn", "nnn_nnnnnnnnnnnnnnnn_nnn", "ppp_pppppppppppppppp_ppp", "ppp_pppppppppppppppp_ppp", "ppp_pppppppppppppppp_ppp", "ppp_pppppppppppppppp_ppp", "sss_sssssss_sss" ] },
+                'chiangmai': { id: 'chiangmai', name: 'SFX CINEMA (MAYA CHIANGMAI)', time: '19/07/2025 06:00 PM', prices: { n: 300, p: 500, s: 800 }, rowLabels: ["N", "M", "L", "K", "J", "H", "G", "F", "E", "D", "C", "B", "A", "AA"], layout: [ "nnnnnnnnnnnnnnnnnnnnnnnn", "nnnnnnnnnnnnnnnnnnnnnnnn", "nnnnnnnnnnnnnnnnnnnnnnnn", "nnnnnnnnnnnnnnnnnnnnnnnn", "nnnnnnnnnnnnnnnnnnnnnnnn", "nnnnnnnnnnnnnnnnnnnnnnnn", "nnnnnnnnnnnnnnnnnnnnnnnn", "nnnnnnnnnnnnnnnnnnnnnnnn", "nnnnnnnnnnnnnnnnnnnnnnnn", "nnnnnnnnnnnnnnnnnnnnnnnn", "pppppppppppppppppppppp", "pppppppppppppppppppppp", "pppppppppppppppppppppp", "ss_ss_ss_ss_ss_ss" ] },
+                'mbk': { id: 'mbk', name: 'SF CINEMA (MBK CENTER)', time: '19/07/2025 04:00 PM', prices: { n: 300, p: 500, s: 800 }, rowLabels: ["P", "N", "M", "L", "K", "J", "H", "G", "F", "E", "D", "C", "B", "A", "AA"], layout: [ "nnnnnnnnnn_nnnnnnnnnn", "nnnnnnnnnn_nnnnnnnnnn", "nnnnnnnnnn_nnnnnnnnnn", "nnnnnnnnnn_nnnnnnnnnn", "nnnnnnnnnn_nnnnnnnnnn", "nnnnnnnnnn_nnnnnnnnnn", "nnnnnnnnnn_nnnnnnnnnn", "nnnnnnnnnn_nnnnnnnnnn", "nnnnnnnnnn_nnnnnnnnnn", "ppppppppp_ppppppppp", "ppppppppp_ppppppppp", "ppppppppp_ppppppppp", "ppppppppp_ppppppppp", "ppppppppp_ppppppppp", "ssssss_ssssss" ] }
+            };
 
-            function showLoading() { document.getElementById('loadingOverlay').classList.remove('hidden'); }
-            function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
-            
-            function navigateTo(pageId) {
-                clearInterval(countdownInterval);
-                if (unsubscribeFromSeats) {
-                    unsubscribeFromSeats();
-                    unsubscribeFromSeats = null;
-                }
-                pages.forEach(page => {
-                    page.classList.remove('active');
-                    if (page.id === pageId) {
-                        page.classList.add('active');
-                    }
-                });
-                window.scrollTo(0, 0);
-            }
+            function showLoading() { document.getElementById('loadingOverlay').classList.remove('hidden'); }
+            function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+            
+            function navigateTo(pageId) {
+                clearInterval(countdownInterval);
+                if (unsubscribeFromSeats) {
+                    unsubscribeFromSeats();
+                    unsubscribeFromSeats = null;
+                }
+                pages.forEach(page => {
+                    page.classList.remove('active');
+                    if (page.id === pageId) {
+                        page.classList.add('active');
+                    }
+                });
+                window.scrollTo(0, 0);
+            }
 
-            function updateSelectionSummary() {
-                const selectedSeatsInfo = document.getElementById('selectedSeatsInfo');
-                const totalPriceInfo = document.getElementById('totalPriceInfo');
-                if (selectedSeats.length === 0) {
-                    selectedSeatsInfo.textContent = '-';
-                    totalPriceInfo.textContent = '0 Baht';
-                } else {
-                    selectedSeatsInfo.textContent = selectedSeats.map(s => s.id).sort().join(', ');
-                    totalPriceInfo.textContent = `${totalPrice} Baht`;
-                }
-                confirmBookingBtn.disabled = selectedSeats.length === 0;
-                confirmBookingBtn.classList.toggle('opacity-50', confirmBookingBtn.disabled);
-                confirmBookingBtn.classList.toggle('cursor-not-allowed', confirmBookingBtn.disabled);
-            }
+            function updateSelectionSummary() {
+                const selectedSeatsInfo = document.getElementById('selectedSeatsInfo');
+                const totalPriceInfo = document.getElementById('totalPriceInfo');
+                if (selectedSeats.length === 0) {
+                    selectedSeatsInfo.textContent = '-';
+                    totalPriceInfo.textContent = '0 Baht';
+                } else {
+                    selectedSeatsInfo.textContent = selectedSeats.map(s => s.id).sort().join(', ');
+                    totalPriceInfo.textContent = `${totalPrice} Baht`;
+                }
+                confirmBookingBtn.disabled = selectedSeats.length === 0;
+                confirmBookingBtn.classList.toggle('opacity-50', confirmBookingBtn.disabled);
+                confirmBookingBtn.classList.toggle('cursor-not-allowed', confirmBookingBtn.disabled);
+            }
 
-            function clearSelection() {
-                document.querySelectorAll('#seatingGrid .seat.selected').forEach(seatEl => seatEl.classList.remove('selected'));
-                selectedSeats = [];
-                totalPrice = 0;
-                updateSelectionSummary();
-            }
+            function clearSelection() {
+                document.querySelectorAll('#seatingGrid .seat.selected').forEach(seatEl => seatEl.classList.remove('selected'));
+                selectedSeats = [];
+                totalPrice = 0;
+                updateSelectionSummary();
+            }
 
-            function formatShowtimeForId(showtimeString) {
-                const [datePart, timePart, ampm] = showtimeString.split(' ');
-                const formattedDate = datePart.replace(/\//g, '-');
-                let [hour, minute] = timePart.split(':');
-                hour = parseInt(hour, 10);
-                if (ampm.toUpperCase() === 'PM' && hour < 12) hour += 12;
-                if (ampm.toUpperCase() === 'AM' && hour === 12) hour = 0;
-                const formattedTime = `${hour.toString().padStart(2, '0')}-${minute}`;
-                return `${formattedDate}-${formattedTime}`;
-            }
+            function formatShowtimeForId(showtimeString) {
+                const [datePart, timePart, ampm] = showtimeString.split(' ');
+                const formattedDate = datePart.replace(/\//g, '-');
+                let [hour, minute] = timePart.split(':');
+                hour = parseInt(hour, 10);
+                if (ampm.toUpperCase() === 'PM' && hour < 12) hour += 12;
+                if (ampm.toUpperCase() === 'AM' && hour === 12) hour = 0;
+                const formattedTime = `${hour.toString().padStart(2, '0')}-${minute}`;
+                return `${formattedDate}-${formattedTime}`;
+            }
 
-            function renderSeatingGrid(soldSeatsFromFirestore) {
-                const seatingGrid = document.getElementById('seatingGrid');
-                seatingGrid.innerHTML = '';
-                let tempSelectedSeats = [];
-                let tempTotalPrice = 0;
-                selectedCinema.layout.forEach((rowLayout, rowIndex) => {
-                    const rowLabelText = selectedCinema.rowLabels[rowIndex];
-                    const rowDiv = document.createElement('div');
-                    rowDiv.className = 'seat-row';
-                    const rowLabelDiv = document.createElement('div');
-                    rowLabelDiv.className = 'row-label';
-                    rowLabelDiv.textContent = rowLabelText;
-                    rowDiv.appendChild(rowLabelDiv);
-                    let seatNumber = 1;
-                    for (let i = 0; i < rowLayout.length; i++) {
-                        const seatType = rowLayout[i];
-                        const seat = document.createElement('div');
-                        if (seatType === '_') {
-                            seat.className = 'seat space';
-                        } else {
-                            const seatId = `${rowLabelText}${seatNumber}`;
-                            seat.dataset.seatId = seatId;
-                            seat.textContent = seatNumber;
-                            if (soldSeatsFromFirestore[seatId]) {
-                                seat.className = 'seat sold';
-                            } else {
-                                const price = selectedCinema.prices[seatType];
-                                let priceClass = '';
-                                if(price === 300) priceClass = 'price-300';
-                                else if(price === 500) priceClass = 'price-500';
-                                else if(price === 800) priceClass = 'price-800';
-                                seat.className = `seat ${priceClass}`;
-                                seat.dataset.price = price;
-                                const isSelectedByUser = selectedSeats.some(s => s.id === seatId);
-                                if (isSelectedByUser) {
-                                    seat.classList.add('selected');
-                                    tempSelectedSeats.push({id: seatId, price: seat.dataset.price});
-                                    tempTotalPrice += parseInt(seat.dataset.price);
-                                }
-                                seat.addEventListener('click', () => {
-                                    if (seat.classList.contains('selected')) {
-                                        seat.classList.remove('selected');
-                                        totalPrice -= parseInt(seat.dataset.price);
-                                        selectedSeats = selectedSeats.filter(s => s.id !== seatId);
-                                    } else {
-                                        seat.classList.add('selected');
-                                        totalPrice += parseInt(seat.dataset.price);
-                                        selectedSeats.push({id: seatId, price: seat.dataset.price});
-                                    }
-                                    updateSelectionSummary();
-                                });
-                            }
-                            seatNumber++;
-                        }
-                        rowDiv.appendChild(seat);
-                    }
-                    rowDiv.setAttribute('aria-label', `Row ${rowLabelText}`);
-                    seatingGrid.appendChild(rowDiv);
-                });
-                selectedSeats = tempSelectedSeats;
-                totalPrice = tempTotalPrice;
-                updateSelectionSummary();
-            }
+            function renderSeatingGrid(soldSeatsFromFirestore) {
+                const seatingGrid = document.getElementById('seatingGrid');
+                seatingGrid.innerHTML = '';
+                let tempSelectedSeats = [];
+                let tempTotalPrice = 0;
+                selectedCinema.layout.forEach((rowLayout, rowIndex) => {
+                    const rowLabelText = selectedCinema.rowLabels[rowIndex];
+                    const rowDiv = document.createElement('div');
+                    rowDiv.className = 'seat-row';
+                    const rowLabelDiv = document.createElement('div');
+                    rowLabelDiv.className = 'row-label';
+                    rowLabelDiv.textContent = rowLabelText;
+                    rowDiv.appendChild(rowLabelDiv);
+                    let seatNumber = 1;
+                    for (let i = 0; i < rowLayout.length; i++) {
+                        const seatType = rowLayout[i];
+                        const seat = document.createElement('div');
+                        if (seatType === '_') {
+                            seat.className = 'seat space';
+                        } else {
+                            const seatId = `${rowLabelText}${seatNumber}`;
+                            seat.dataset.seatId = seatId;
+                            seat.textContent = seatNumber;
+                            if (soldSeatsFromFirestore[seatId]) {
+                                seat.className = 'seat sold';
+                            } else {
+                                const price = selectedCinema.prices[seatType];
+                                let priceClass = '';
+                                if(price === 300) priceClass = 'price-300';
+                                else if(price === 500) priceClass = 'price-500';
+                                else if(price === 800) priceClass = 'price-800';
+                                seat.className = `seat ${priceClass}`;
+                                seat.dataset.price = price;
+                                const isSelectedByUser = selectedSeats.some(s => s.id === seatId);
+                                if (isSelectedByUser) {
+                                    seat.classList.add('selected');
+                                    tempSelectedSeats.push({id: seatId, price: seat.dataset.price});
+                                    tempTotalPrice += parseInt(seat.dataset.price);
+                                }
+                                seat.addEventListener('click', () => {
+                                    if (seat.classList.contains('selected')) {
+                                        seat.classList.remove('selected');
+                                        totalPrice -= parseInt(seat.dataset.price);
+                                        selectedSeats = selectedSeats.filter(s => s.id !== seatId);
+                                    } else {
+                                        seat.classList.add('selected');
+                                        totalPrice += parseInt(seat.dataset.price);
+                                        selectedSeats.push({id: seatId, price: seat.dataset.price});
+                                    }
+                                    updateSelectionSummary();
+                                });
+                            }
+                            seatNumber++;
+                        }
+                        rowDiv.appendChild(seat);
+                    }
+                    rowDiv.setAttribute('aria-label', `Row ${rowLabelText}`);
+                    seatingGrid.appendChild(rowDiv);
+                });
+                selectedSeats = tempSelectedSeats;
+                totalPrice = tempTotalPrice;
+                updateSelectionSummary();
+            }
 
-            async function generateSeatingPlan(cinemaId) {
-                if (!isFirebaseReady) {
-                    alert('System is not ready. Please check Firebase connection.');
-                    return;
-                }
-                selectedCinema = cinemaData[cinemaId];
-                document.getElementById('cinemaName').textContent = selectedCinema.name;
-                document.getElementById('cinemaTime').textContent = selectedCinema.time;
-                seatingErrorMessage.textContent = '';
-                clearSelection();
-                if (unsubscribeFromSeats) {
-                    unsubscribeFromSeats();
-                    unsubscribeFromSeats = null;
-                }
-                showLoading();
-                const cinemaSeatsDocId = `${selectedCinema.id}-${formatShowtimeForId(selectedCinema.time)}`;
-                console.log("Attempting to fetch document:", `artifacts/${appId}/public/data/cinemaSeats/${cinemaSeatsDocId}`);
-                const cinemaSeatsDocRef = doc(db, `artifacts/${appId}/public/data/cinemaSeats`, cinemaSeatsDocId);
-                
-                // IMPORTANT: Make sure your Firestore Security Rules allow this read operation.
-                // Example rule for public data:
-                // match /artifacts/{appId}/public/data/{document=**} {
-                //   allow read: if true;
-                //   allow write: if request.auth != null; // Or more specific rules
-                // }
-                
-                unsubscribeFromSeats = onSnapshot(cinemaSeatsDocRef, (docSnap) => {
-                    console.log("Firestore snapshot received. Document exists:", docSnap.exists());
-                    const soldSeatsFromFirestore = docSnap.exists() ? docSnap.data().soldSeats || {} : {};
-                    renderSeatingGrid(soldSeatsFromFirestore);
-                    hideLoading();
-                }, (error) => {
-                    console.error("Error listening to seat updates:", error);
-                    seatingErrorMessage.textContent = `Error loading seats. Check console and Firestore rules. (${error.code})`;
-                    hideLoading();
-                });
-                navigateTo('seatingPlanPage');
-            }
+            function startCountdown() {
+                let timeLeft = COUNTDOWN_SECONDS;
+                const timerEl = document.getElementById('countdownTimer');
+                const messageEl = document.getElementById('countdownMessage');
+                const updateTimer = () => {
+                    if (timeLeft <= 0) {
+                        clearInterval(countdownInterval);
+                        messageEl.textContent = "⏰ အချိန်စေ့သွားပါပြီ။ ကျေးဇူးပြု၍ပြန်စပါ။";
+                        timerEl.textContent = "Reloading...";
+                        setTimeout(() => location.reload(), 2000);
+                        return;
+                    }
+                    timeLeft--;
+                    const minutes = Math.floor(timeLeft / 60);
+                    const seconds = timeLeft % 60;
+                    timerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                };
+                updateTimer();
+                countdownInterval = setInterval(updateTimer, 1000);
+            }
+            
+            // UPDATED: showPaymentPage function to include m.me link with pre-filled text
+            async function showPaymentPage() {
+                const cinemaNameEl = document.getElementById('paymentCinemaName');
+                const cinemaTimeEl = document.getElementById('paymentCinemaTime');
+                const selectedSeatsEl = document.getElementById('paymentSelectedSeats');
+                const totalPriceEl = document.getElementById('paymentTotalPrice');
+                const bookingTimeEl = document.getElementById('bookingTime');
+                const paymentLink = document.getElementById('paymentLink');
+                const qrCanvas = document.getElementById('qrCanvas');
+                const downloadQRBtn = document.getElementById('downloadQRBtn');
 
-            function startCountdown() {
-                let timeLeft = COUNTDOWN_SECONDS;
-                const timerEl = document.getElementById('countdownTimer');
-                const messageEl = document.getElementById('countdownMessage');
-                const updateTimer = () => {
-                    if (timeLeft <= 0) {
-                        clearInterval(countdownInterval);
-                        messageEl.textContent = "⏰ အချိန်စေ့သွားပါပြီ။ ကျေးဇူးပြု၍ပြန်စပါ။";
-                        timerEl.textContent = "Reloading...";
-                        setTimeout(() => location.reload(), 2000);
-                        return;
-                    }
-                    timeLeft--;
-                    const minutes = Math.floor(timeLeft / 60);
-                    const seconds = timeLeft % 60;
-                    timerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                };
-                updateTimer();
-                countdownInterval = setInterval(updateTimer, 1000);
-            }
-            
-            async function showPaymentPage() {
-                const cinemaNameEl = document.getElementById('paymentCinemaName');
-                const cinemaTimeEl = document.getElementById('paymentCinemaTime');
-                const selectedSeatsEl = document.getElementById('paymentSelectedSeats');
-                const totalPriceEl = document.getElementById('paymentTotalPrice');
-                const bookingTimeEl = document.getElementById('bookingTime');
-                const sortedSeats = selectedSeats.map(s => s.id).sort().join(', ');
-                const now = new Date();
-                const bookingTimeText = `${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-                const qrText = `Movie: What happened to the wolf?\nCinema: ${selectedCinema.name}\nShowtime: ${selectedCinema.time}\nSeats: ${sortedSeats}\nTotal: ${totalPrice} Baht\nBooking Time: ${bookingTimeText}\nUserID: ${userId}`;
-                cinemaNameEl.textContent = selectedCinema.name;
-                cinemaTimeEl.textContent = selectedCinema.time;
-                selectedSeatsEl.textContent = sortedSeats;
-                totalPriceEl.textContent = `${totalPrice} Baht`;
-                bookingTimeEl.textContent = bookingTimeText;
-                paymentLink.href = 'https://m.me/24framesmozart';
-                if (db && userId) {
-                    const bookingId = `${formatShowtimeForId(selectedCinema.time)}-${sortedSeats.replace(/, /g, '_')}`;
-                    const userBookingRef = doc(db, `artifacts/${appId}/users/${userId}/bookings`, bookingId);
-                    try {
-                        await setDoc(userBookingRef, {
-                            cinemaName: selectedCinema.name,
-                            showtime: selectedCinema.time,
-                            seats: sortedSeats,
-                            totalPrice: totalPrice,
-                            bookingTime: now,
-                            qrCodeText: qrText,
-                            status: 'payment_pending'
-                        });
-                        console.log("User booking record saved.");
-                    } catch (error) {
-                        console.error("Error saving user booking record:", error);
-                    }
-                }
-                navigateTo('paymentPage');
-                startCountdown();
-                generateAndSetupQRCode(qrText);
-            }
+                const sortedSeats = selectedSeats.map(s => s.id).sort().join(', ');
+                const now = new Date();
+                const bookingTimeText = `${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                
+                // Messenger သို့ ပို့မည့် စာသား
+                const messageForMessenger = `
+🎞️ ရုပ်ရှင်လက်မှတ် ဘိုကင်တင်ခြင်း အတည်ပြုချက် 🎞️
 
-            function generateAndSetupQRCode(qrText, canvasElement) {
-                const canvas = canvasElement || document.getElementById('qrCanvas');
-                const downloadBtn = canvas.nextElementSibling; // Assumes download button is next sibling
-                QRCode.toCanvas(canvas, qrText, { width: 220, margin: 2 }, function (error) {
-                    if (error) {
-                        console.error(error);
-                        canvas.style.display = 'none';
-                        if (downloadBtn && downloadBtn.tagName === 'A') downloadBtn.style.display = 'none';
-                        return;
-                    }
-                    console.log('QR code generated successfully!');
-                    if (downloadBtn && downloadBtn.tagName === 'A') {
-                        downloadBtn.href = canvas.toDataURL('image/png');
-                        downloadBtn.download = `movie-ticket-booking.png`;
-                    }
-                });
-            }
+🎫 ရုပ်ရှင်: What happened to the wolf?
+🎬 ရုပ်ရှင်ရုံ: ${selectedCinema.name}
+🕒 ပြသချိန်: ${selectedCinema.time}
+🪑 ခုံနံပါတ်များ: ${sortedSeats}
+💰 စုစုပေါင်း: ${totalPrice} Baht
+🗓️ Booking အချိန်: ${bookingTimeText}
 
-            async function attemptBooking() {
-                if (!isFirebaseReady) {
-                    seatingErrorMessage.textContent = 'System is not ready. Cannot process booking.';
-                    return;
-                }
-                if (selectedSeats.length === 0) {
-                    seatingErrorMessage.textContent = 'ကျေးဇူးပြု၍ ခုံများ ရွေးချယ်ပါ။';
-                    return;
-                }
-                seatingErrorMessage.textContent = '';
-                showLoading();
-                const cinemaSeatsDocRef = doc(db, `artifacts/${appId}/public/data/cinemaSeats`, `${selectedCinema.id}-${formatShowtimeForId(selectedCinema.time)}`);
-                try {
-                    await runTransaction(db, async (transaction) => {
-                        const docSnap = await transaction.get(cinemaSeatsDocRef);
-                        let currentSoldSeats = docSnap.exists() ? docSnap.data().soldSeats || {} : {};
-                        const seatsToUpdate = {};
-                        for (const seat of selectedSeats) {
-                            if (currentSoldSeats[seat.id]) {
-                                throw new Error(`Seat ${seat.id} is already sold. Please select another seat.`);
-                            }
-                            seatsToUpdate[`soldSeats.${seat.id}`] = { soldAt: new Date(), userId: userId };
-                        }
-                        if (docSnap.exists()) {
-                            transaction.update(cinemaSeatsDocRef, seatsToUpdate);
-                        } else {
-                            const initialData = {};
-                            for (const key in seatsToUpdate) {
-                                const seatId = key.split('.')[1];
-                                initialData[seatId] = seatsToUpdate[key];
-                            }
-                            transaction.set(cinemaSeatsDocRef, {
-                                cinemaName: selectedCinema.name,
-                                showtime: selectedCinema.time,
-                                soldSeats: initialData
-                            });
-                        }
-                    });
-                    console.log("Booking transaction successfully committed!");
-                    await showPaymentPage();
-                } catch (e) {
-                    console.error("Booking transaction failed: ", e);
-                    seatingErrorMessage.textContent = `Booking failed: ${e.message || 'An unexpected error occurred.'}`;
-                } finally {
-                    hideLoading();
-                }
-            }
+ဤလက်မှတ်သည် ငွေပေးချေမှု မပြုရသေးပါ။ ကျေးဇူးပြု၍ ငွေပေးချေမှု အပြီးသတ်ရန် ဤမက်ဆေ့ချ်ကို ပေးပို့ပါ။
+`;
 
-            // --- NEW: My Tickets Page Logic ---
-            async function showMyTickets() {
-                if (!isFirebaseReady) {
-                    alert('System is not ready. Please check Firebase connection.');
-                    return;
-                }
-                navigateTo('myTicketsPage');
-                const container = document.getElementById('myTicketsContainer');
-                const noTicketsMessage = document.getElementById('noTicketsMessage');
-                container.innerHTML = ''; // Clear previous tickets
-                
-                showLoading();
-                try {
-                    const bookingsRef = collection(db, `artifacts/${appId}/users/${userId}/bookings`);
-                    // Note: Sorting by timestamp might require creating a composite index in Firestore.
-                    // For simplicity, we fetch and sort in the client for now.
-                    const q = query(bookingsRef); 
-                    const querySnapshot = await getDocs(q);
-                    
-                    if (querySnapshot.empty) {
-                        container.appendChild(noTicketsMessage);
-                        noTicketsMessage.style.display = 'block';
-                    } else {
-                        noTicketsMessage.style.display = 'none';
-                        const bookings = [];
-                        querySnapshot.forEach((doc) => {
-                            bookings.push({ id: doc.id, ...doc.data() });
-                        });
+                // URL-encoded ဖြစ်အောင် လုပ်ခြင်း (QR code text အတွက်လည်း သုံးပါမည်)
+                const encodedMessage = encodeURIComponent(messageForMessenger);
 
-                        // Sort by booking time, newest first
-                        bookings.sort((a, b) => b.bookingTime.toDate() - a.bookingTime.toDate());
+                cinemaNameEl.textContent = selectedCinema.name;
+                cinemaTimeEl.textContent = selectedCinema.time;
+                selectedSeatsEl.textContent = sortedSeats;
+                totalPriceEl.textContent = `${totalPrice} Baht`;
+                bookingTimeEl.textContent = bookingTimeText;
 
-                        bookings.forEach(booking => {
-                            const card = document.createElement('div');
-                            card.className = 'bg-gray-700 p-4 rounded-lg shadow-md flex flex-col md:flex-row gap-4 items-center';
+                // m.me link ကို Pre-filled text ဖြင့် ဖန်တီးခြင်း
+                // "24framesmozart" ကို သင့် Facebook Page Username ဖြင့် အစားထိုးနိုင်ပါသည်။
+                paymentLink.href = `https://m.me/24framesmozart?ref=booking_confirm&text=${encodedMessage}`;
+                paymentLink.target = "_blank"; // Messenger ကို tab အသစ်မှာ ဖွင့်ရန်
+                
+                // Firebase မှာ User Booking Record ကို Save လုပ်ခြင်း (ရှိပြီးသား code အတိုင်း)
+                if (db && userId) {
+                    const bookingId = `${formatShowtimeForId(selectedCinema.time)}-${sortedSeats.replace(/, /g, '_')}`;
+                    const userBookingRef = doc(db, `artifacts/${appId}/users/${userId}/bookings`, bookingId);
+                    try {
+                        await setDoc(userBookingRef, {
+                            cinemaName: selectedCinema.name,
+                            showtime: selectedCinema.time,
+                            seats: sortedSeats,
+                            totalPrice: totalPrice,
+                            bookingTime: now,
+                            qrCodeText: decodeURIComponent(encodedMessage), // QR code အတွက် URL-decoded text
+                            status: 'payment_pending'
+                        });
+                        console.log("User booking record saved.");
+                    } catch (error) {
+                        console.error("Error saving user booking record:", error);
+                    }
+                }
 
-                            const details = document.createElement('div');
-                            details.className = 'flex-grow text-left';
-                            
-                            const statusColor = booking.status === 'confirmed' ? 'text-green-400' : 'text-yellow-400';
+                navigateTo('paymentPage');
+                startCountdown();
+                // QR Code ကို Generate လုပ်ရန်
+                generateAndSetupQRCode(decodeURIComponent(encodedMessage), qrCanvas, downloadQRBtn);
+            }
 
-                            details.innerHTML = `
-                                <p><strong>ရုပ်ရှင်ရုံ:</strong> ${booking.cinemaName}</p>
-                                <p><strong>ပြသချိန်:</strong> ${booking.showtime}</p>
-                                <p><strong>ခုံနံပါတ်များ:</strong> <span class="font-bold">${booking.seats}</span></p>
-                                <p><strong>စုစုပေါင်း:</strong> <span class="font-bold text-green-400">${booking.totalPrice} Baht</span></p>
-                                <p><strong>အခြေအနေ:</strong> <span class="font-bold ${statusColor}">${booking.status.replace('_', ' ').toUpperCase()}</span></p>
-                            `;
-                            
-                            const qrContainer = document.createElement('div');
-                            qrContainer.className = 'text-center';
-                            const qrCanvas = document.createElement('canvas');
-                            qrCanvas.className = 'bg-white p-1 rounded-md mx-auto';
-                            const downloadLink = document.createElement('a');
-                            downloadLink.className = 'btn btn-secondary mt-2 text-sm';
-                            downloadLink.textContent = 'Download QR';
+            // UPDATED: generateAndSetupQRCode function to handle elements passed as arguments
+            function generateAndSetupQRCode(qrText, canvasElement, downloadBtnElement) {
+                const canvas = canvasElement || document.getElementById('qrCanvas');
+                const downloadBtn = downloadBtnElement || document.getElementById('downloadQRBtn');
+                
+                // Canvas ကို ရှင်းလင်းခြင်း (QR အသစ်ဆွဲဖို့အတွက်)
+                const context = canvas.getContext('2d');
+                context.clearRect(0, 0, canvas.width, canvas.height);
 
-                            qrContainer.appendChild(qrCanvas);
-                            qrContainer.appendChild(downloadLink);
-                            
-                            card.appendChild(details);
-                            card.appendChild(qrContainer);
-                            container.appendChild(card);
+                QRCode.toCanvas(canvas, qrText, { width: 220, margin: 2 }, function (error) {
+                    if (error) {
+                        console.error("QR Code generation error:", error);
+                        canvas.style.display = 'none';
+                        if (downloadBtn) downloadBtn.style.display = 'none';
+                        return;
+                    }
+                    console.log('QR code generated successfully!');
+                    if (downloadBtn) {
+                        downloadBtn.href = canvas.toDataURL('image/png');
+                        // Download filename ကို ပိုပြီး specific ဖြစ်အောင် လုပ်ပါ
+                        downloadBtn.download = `movie-ticket-${selectedCinema.id}-${new Date().getTime()}.png`;
+                        downloadBtn.style.display = 'inline-block'; // QR success မှ ပြပါ
+                    }
+                    canvas.style.display = 'block'; // QR success မှ ပြပါ
+                });
+            }
 
-                            generateAndSetupQRCode(booking.qrCodeText, qrCanvas);
-                        });
-                    }
-                } catch (error) {
-                    console.error("Error fetching user bookings:", error);
-                    container.innerHTML = `<p class="text-red-500 text-center">Error loading tickets: ${error.message}</p>`;
-                } finally {
-                    hideLoading();
-                }
-            }
+            async function attemptBooking() {
+                if (!isFirebaseReady) {
+                    seatingErrorMessage.textContent = 'System is not ready. Cannot process booking.';
+                    return;
+                }
+                if (selectedSeats.length === 0) {
+                    seatingErrorMessage.textContent = 'ကျေးဇူးပြု၍ ခုံများ ရွေးချယ်ပါ။';
+                    return;
+                }
+                seatingErrorMessage.textContent = '';
+                showLoading();
+                const cinemaSeatsDocRef = doc(db, `artifacts/${appId}/public/data/cinemaSeats`, `${selectedCinema.id}-${formatShowtimeForId(selectedCinema.time)}`);
+                try {
+                    await runTransaction(db, async (transaction) => {
+                        const docSnap = await transaction.get(cinemaSeatsDocRef);
+                        let currentSoldSeats = docSnap.exists() ? docSnap.data().soldSeats || {} : {};
+                        const seatsToUpdate = {};
+                        for (const seat of selectedSeats) {
+                            if (currentSoldSeats[seat.id]) {
+                                throw new Error(`Seat ${seat.id} is already sold. Please select another seat.`);
+                            }
+                            seatsToUpdate[`soldSeats.${seat.id}`] = { soldAt: new Date(), userId: userId };
+                        }
+                        if (docSnap.exists()) {
+                            transaction.update(cinemaSeatsDocRef, seatsToUpdate);
+                        } else {
+                            const initialData = {};
+                            for (const key in seatsToUpdate) {
+                                const seatId = key.split('.')[1];
+                                initialData[seatId] = seatsToUpdate[key];
+                            }
+                            transaction.set(cinemaSeatsDocRef, {
+                                cinemaName: selectedCinema.name,
+                                showtime: selectedCinema.time,
+                                soldSeats: initialData
+                            });
+                        }
+                    });
+                    console.log("Booking transaction successfully committed!");
+                    await showPaymentPage();
+                } catch (e) {
+                    console.error("Booking transaction failed: ", e);
+                    seatingErrorMessage.textContent = `Booking failed: ${e.message || 'An unexpected error occurred.'}`;
+                } finally {
+                    hideLoading();
+                }
+            }
 
-            // --- Event Listeners ---
-            buyTicketsBtn.addEventListener('click', () => navigateTo('cinemaSelectionPage'));
-            myTicketsBtn.addEventListener('click', showMyTickets);
-            
-            cinemaButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const cinemaId = button.dataset.cinema;
-                    generateSeatingPlan(cinemaId);
-                });
-            });
+            // NEW: My Tickets Page Logic - Revised to include Mark as Paid
+            async function showMyTickets() {
+                if (!isFirebaseReady) {
+                    alert('System is not ready. Please check Firebase connection.');
+                    return;
+                }
+                navigateTo('myTicketsPage');
+                const container = document.getElementById('myTicketsContainer');
+                const noTicketsMessage = document.getElementById('noTicketsMessage');
+                container.innerHTML = ''; // Clear previous tickets
+                
+                showLoading();
+                try {
+                    const bookingsRef = collection(db, `artifacts/${appId}/users/${userId}/bookings`);
+                    const q = query(bookingsRef); 
+                    const querySnapshot = await getDocs(q);
+                    
+                    if (querySnapshot.empty) {
+                        container.appendChild(noTicketsMessage);
+                        noTicketsMessage.style.display = 'block';
+                    } else {
+                        noTicketsMessage.style.display = 'none';
+                        const bookings = [];
+                        querySnapshot.forEach((doc) => {
+                            bookings.push({ id: doc.id, ...doc.data() });
+                        });
 
-            confirmBookingBtn.addEventListener('click', attemptBooking);
-            clearSelectionBtn.addEventListener('click', clearSelection);
-            
-            paymentLink.addEventListener('click', () => {
-                clearInterval(countdownInterval);
-            });
+                        // Sort by booking time, newest first
+                        bookings.sort((a, b) => b.bookingTime.toDate() - a.bookingTime.toDate());
 
-            // Back button listeners
-            backToIntroBtn.addEventListener('click', () => navigateTo('introPage'));
-            backToCinemaBtn.addEventListener('click', () => {
-                clearSelection();
-                navigateTo('cinemaSelectionPage');
-            });
-            backToSeatingBtn.addEventListener('click', () => navigateTo('seatingPlanPage'));
-            backToIntroFromTicketsBtn.addEventListener('click', () => navigateTo('introPage'));
-        });
-    </script>
+                        bookings.forEach(booking => {
+                            const card = document.createElement('div');
+                            card.className = 'bg-gray-700 p-4 rounded-lg shadow-md flex flex-col md:flex-row gap-4 items-center';
+
+                            const details = document.createElement('div');
+                            details.className = 'flex-grow text-left';
+                            
+                            const statusColor = booking.status === 'confirmed' ? 'text-green-400' : 'text-yellow-400';
+                            const isPaymentPending = booking.status === 'payment_pending';
+
+                            details.innerHTML = `
+                                <p><strong>ရုပ်ရှင်ရုံ:</strong> ${booking.cinemaName}</p>
+                                <p><strong>ပြသချိန်:</strong> ${booking.showtime}</p>
+                                <p><strong>ခုံနံပါတ်များ:</strong> <span class="font-bold">${booking.seats}</span></p>
+                                <p><strong>စုစုပေါင်း:</strong> <span class="font-bold text-green-400">${booking.totalPrice} Baht</span></p>
+                                <p><strong>အခြေအနေ:</strong> <span class="font-bold ${statusColor}">${booking.status.replace('_', ' ').toUpperCase()}</span></p>
+                            `;
+                            
+                            const qrContainer = document.createElement('div');
+                            qrContainer.className = 'text-center';
+                            const qrCanvas = document.createElement('canvas');
+                            qrCanvas.className = 'bg-white p-1 rounded-md mx-auto';
+                            qrCanvas.style.marginBottom = '8px'; // Add some space below QR
+                            const downloadLink = document.createElement('a');
+                            downloadLink.className = 'btn btn-secondary mt-2 text-sm';
+                            downloadLink.textContent = 'Download QR';
+
+                            qrContainer.appendChild(qrCanvas);
+                            qrContainer.appendChild(downloadLink);
+
+                            // NEW: Mark as Paid Button (for testing payment confirmation flow)
+                            if (isPaymentPending) {
+                                const payButton = document.createElement('button');
+                                payButton.className = 'btn btn-primary mt-2 text-sm w-full';
+                                payButton.textContent = 'Mark as Paid (For Testing)';
+                                payButton.dataset.bookingId = booking.id;
+                                payButton.addEventListener('click', async (e) => {
+                                    const bookingIdToUpdate = e.target.dataset.bookingId;
+                                    showLoading();
+                                    try {
+                                        const bookingDocRef = doc(db, `artifacts/${appId}/users/${userId}/bookings`, bookingIdToUpdate);
+                                        await setDoc(bookingDocRef, { status: 'confirmed' }, { merge: true });
+                                        alert('Ticket marked as paid (For Testing Purposes)!');
+                                        showMyTickets(); // Refresh the list
+                                    } catch (error) {
+                                        console.error('Error marking as paid:', error);
+                                        alert('Failed to mark as paid: ' + error.message);
+                                    } finally {
+                                        hideLoading();
+                                    }
+                            });
+                            qrContainer.appendChild(payButton);
+                            }
+                            
+                            card.appendChild(details);
+                            card.appendChild(qrContainer);
+                            container.appendChild(card);
+
+                            generateAndSetupQRCode(booking.qrCodeText, qrCanvas, downloadLink);
+                        });
+                    }
+                } catch (error) {
+                    console.error("Error fetching user bookings:", error);
+                    container.innerHTML = `<p class="text-red-500 text-center">Error loading tickets: ${error.message}</p>`;
+                } finally {
+                    hideLoading();
+                }
+            }
+
+            // --- Event Listeners ---
+            buyTicketsBtn.addEventListener('click', () => navigateTo('cinemaSelectionPage'));
+            myTicketsBtn.addEventListener('click', showMyTickets);
+            
+            cinemaButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const cinemaId = button.dataset.cinema;
+                    generateSeatingPlan(cinemaId);
+                });
+            });
+
+            confirmBookingBtn.addEventListener('click', attemptBooking);
+            clearSelectionBtn.addEventListener('click', clearSelection);
+            
+            // paymentLink.addEventListener('click', () => {
+            //     clearInterval(countdownInterval); // m.me link ကို နှိပ်ပြီးတာနဲ့ countdown ကို ရပ်ပါ
+            // }); // Not strictly needed as navigateTo already clears interval
+
+            // Back button listeners
+            backToIntroBtn.addEventListener('click', () => navigateTo('introPage'));
+            backToCinemaBtn.addEventListener('click', () => {
+                clearSelection();
+                navigateTo('cinemaSelectionPage');
+            });
+            backToSeatingBtn.addEventListener('click', () => navigateTo('seatingPlanPage'));
+            backToIntroFromTicketsBtn.addEventListener('click', () => navigateTo('introPage'));
+        });
+    </script>
 </body>
 </html>
